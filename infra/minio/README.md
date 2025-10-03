@@ -1,0 +1,1 @@
+# конфиги MinIO (users, buckets.json)
