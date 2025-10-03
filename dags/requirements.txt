@@ -1,0 +1,9 @@
+dagster
+polars
+pandas
+sqlalchemy 
+psycopg2-binary
+boto3
+dagster-postgres
+dagster-cloud
+dagster-aws
