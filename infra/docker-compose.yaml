@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  web_proxy:
+    image: nginx:latest
+    container_name: web_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/nginx/conf.d:/etc/nginx/conf.d
+      - ./certs/nginx/certs:/etc/nginx/certs
+      - ./logs/nginx/logs:/var/log/nginx
+    depends_on:
+      - superset
+    networks:
+      - webnet
+    restart: unless-stopped
+
+
+
+services:
+  superset:
+    image: apache/superset:latest
+    container_name: superset
+    environment:
+      - SUPERSET_ENV=development
+      - SUPERSET_LOAD_EXAMPLES=yes
+      - SUPERSET_SECRET_KEY=R0adMapping
+      - DATABASE_URL=sqlite:////app/superset_home/superset.db
+    volumes:
+      - ./superset_home:/app/superset_home
+    networks:
+      - inner
+    restart: unless-stopped
+
+services:
+  db:
+    image: postgres:17
+    container_name: dwh
+    environment:
+      - POSTGRES_DB=dwh
+      - POSTGRES_USER=dwh
+      - POSTGRES_PASSWORD=dwhpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - dwh_db_data:/var/lib/postgresql/data
+    networks:
+      - webnet
+      - inner
+    restart: unless-stopped
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data
+    volumes:
+      - ./minio_data:/data
+    networks:
+      - inner
+    restart: unless-stopped
+
+networks:
+  webnet:
+    driver: bridge
+  inner: 
+    internal: true
+
+
+volumes:  
+  dwh_db_data:
