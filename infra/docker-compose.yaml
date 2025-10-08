@@ -67,4 +67,5 @@ networks:
     internal: true
 
 
-volumes:  
+volumes:
+  dwh_db_data:  
