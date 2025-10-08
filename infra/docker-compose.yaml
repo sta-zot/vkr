@@ -17,9 +17,6 @@ services:
       - webnet
     restart: unless-stopped
 
-
-
-services:
   superset:
     image: apache/superset:latest
     container_name: superset
@@ -34,7 +31,6 @@ services:
       - inner
     restart: unless-stopped
 
-services:
   db:
     image: postgres:17
     container_name: dwh
@@ -51,7 +47,6 @@ services:
       - inner
     restart: unless-stopped
 
-services:
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -73,4 +68,3 @@ networks:
 
 
 volumes:  
-  dwh_db_data:
