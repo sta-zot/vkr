@@ -1,6 +1,89 @@
-version: '3.8'
+version: '3.9'
 
 services:
+  redis:
+    image: redis:7
+    container_name: superset_redis
+    networks:
+      - inner
+    restart: unless-stopped
+
+  superset-db:
+    image: postgres:17
+    container_name: superset_db
+    environment:
+      - POSTGRES_DB=superset
+      - POSTGRES_USER=superset
+      - POSTGRES_PASSWORD=superset
+    volumes:
+      - superset_db_data:/var/lib/postgresql/data
+    networks:
+      - inner
+    restart: unless-stopped
+
+  superset:
+    image: apache/superset:latest
+    container_name: superset
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    depends_on:
+      - superset-db
+      - redis
+    # ports:  # Раскомментируйте для прямого доступа при настройке; уберите в продакшене
+    #   - "8088:8088"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py
+    networks:
+      - inner
+    restart: unless-stopped
+
+  superset-init:
+    image: apache/superset:latest
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    depends_on:
+      - superset-db
+      - redis
+    user: "root"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py
+    networks:
+      - inner
+    healthcheck:
+      disable: true
+
+  superset-worker:
+    image: apache/superset:latest
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    depends_on:
+      - superset-db
+      - redis
+    user: "root"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py
+    networks:
+      - inner
+    restart: unless-stopped
+
+  superset-worker-beat:
+    image: apache/superset:latest
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    depends_on:
+      - superset-db
+      - redis
+    user: "root"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py
+    networks:
+      - inner
+    restart: unless-stopped
+
   web_proxy:
     image: nginx:latest
     container_name: web_proxy
@@ -15,15 +98,6 @@ services:
       - superset
     networks:
       - webnet
-    restart: unless-stopped
-
-  superset:
-    image: apache/superset:latest
-    container_name: superset
-    environment:
-      SUPERSET__SQLALCHEMY_EXAMPLES_URI: "duckdb:////app/data/examples.duckdb"
-    volumes: superset-volume
-    networks:
       - inner
     restart: unless-stopped
 
@@ -43,15 +117,32 @@ services:
       - inner
     restart: unless-stopped
 
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - inner
+    restart: unless-stopped
+
   minio:
-    image: minio/minio:latest
+    image: minio/minio:latest  # Обновлено до latest; используйте конкретный тег при необходимости
     container_name: minio
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Консоль
     volumes:
-      - ./minio_data:/data
+      - minio_data:/data
     networks:
       - inner
     restart: unless-stopped
@@ -59,10 +150,12 @@ services:
 networks:
   webnet:
     driver: bridge
-  inner: 
+  inner:
     internal: true
 
-
 volumes:
-- dwh_db_data:
-- superset-volume:
+  superset_db_data:
+  superset_home:
+  dwh_db_data:
+  mongo_data:
+  minio_data:
