@@ -21,12 +21,8 @@ services:
     image: apache/superset:latest
     container_name: superset
     environment:
-      - SUPERSET_ENV=development
-      - SUPERSET_LOAD_EXAMPLES=yes
-      - SUPERSET_SECRET_KEY=R0adMapping
-      - DATABASE_URL=sqlite:////app/superset_home/superset.db
-    volumes:
-      - ./superset_home:/app/superset_home
+      SUPERSET__SQLALCHEMY_EXAMPLES_URI: "duckdb:////app/data/examples.duckdb"
+    volumes: superset-volume
     networks:
       - inner
     restart: unless-stopped
@@ -68,4 +64,5 @@ networks:
 
 
 volumes:
-  dwh_db_data:  
+- dwh_db_data:
+- superset-volume:
