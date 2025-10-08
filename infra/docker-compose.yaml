@@ -41,7 +41,12 @@ services:
   superset-init:
     image: apache/superset:latest
     container_name: superset_init
-    command: ["/app/docker/docker-init.sh"]
+    command: >
+      /bin/sh -c "
+        /app/docker/docker-init.sh &&
+        superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+        superset init
+      "
     depends_on:
       - superset-db
       - redis
